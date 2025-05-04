@@ -343,7 +343,7 @@ def minimax(board, depth, is_maximizing, player):
 
 
 def minimax_move(board, depth, player):
-    """Wrapper function to get best move using minimax.
+    """Get best move using minimax, but take immediate winning move if available.
     Args:
         board (list): Current game board
         depth (int): Search depth
@@ -351,8 +351,27 @@ def minimax_move(board, depth, player):
     Returns:
         tuple: (x,y) coordinates of best move
     """
+    opponent = 'W' if player == 'B' else 'B'
+    moves = get_candidate_moves(board)
+
+    # Check for immediate winning move
+    for x, y in moves:
+        temp_board = copy.deepcopy(board)
+        temp_board[x][y] = player
+        if is_winner(temp_board, player):
+            return (x, y)
+
+    # Check for immediate blocking move
+    for x, y in moves:
+        temp_board = copy.deepcopy(board)
+        temp_board[x][y] = opponent
+        if is_winner(temp_board, opponent):
+            return (x, y)
+
+    # Otherwise use minimax to choose best move
     _, move = minimax(board, depth, True, player)
     return move
+
 
 
 def display_menu():
