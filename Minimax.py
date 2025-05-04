@@ -40,7 +40,7 @@ The implementation includes optimizations:
 import copy
 
 # Game Constants
-BOARD_SIZE = 15  # Standard Gomoku board size (15x15 grid)
+BOARD_SIZE = 10  # Standard Gomoku board size (15x15 grid)
 DEPTH_SIZE = 3  # Depth for AI search (higher = stronger but slower)
 
 # Direction vectors for checking lines (8 directions: horizontal, vertical, diagonal)
@@ -120,13 +120,27 @@ def initialize_board():
     return [['.' for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
 
 
+def print_column_indices():
+    print("  ", end=" ")
+    for i in range(BOARD_SIZE):
+        print(f"{i:2}", end=" ")
+    print()
+
+
+def print_row(board, row_idx):
+    print(f"{row_idx:2}", end="  ")
+    for j in range(BOARD_SIZE):
+        print(board[row_idx][j], end="  ")
+    print()
+
+
 def print_board(board):
-    """Print the current game board in readable format.
-    Args:
-        board (list): 2D list representing the game board
-    """
-    for row in board:
-        print(" ".join(row))  # Print each row as space-separated characters
+    print_column_indices()
+    for i in range(BOARD_SIZE):
+        print_row(board , i)  # Print each row with index
+
+
+# Print each row as space-separated characters
 
 
 def get_candidate_moves(board, initial_radius=1):
@@ -141,7 +155,7 @@ def get_candidate_moves(board, initial_radius=1):
 
     # First move must be center (standard Gomoku rule)
     if all(cell == '.' for row in board for cell in row):
-        return [(7, 7)]
+        return [(5, 5)]
 
     # Phase 1: Check within radius of existing stones
     for x in range(BOARD_SIZE):
@@ -199,33 +213,26 @@ def make_move(board, x, y, player):
 
 
 def evaluate_board(board, player):
-    """Evaluate board state and return score for given player.
-    Args:
-        board (list): Current game board
-        player (str): 'B' or 'W' representing player to evaluate for
-    Returns:
-        int: Score (higher = better for player)
-    """
     opponent = 'W' if player == 'B' else 'B'
     score = 0
 
-    # Pattern values (weights can be adjusted for AI strength)
-    patterns = {
-        '5': 100000,  # Immediate win
-        'open4': 10000,  # 4 with open end
-        'open3': 1000,  # 3 with open end
-        'open2': 100,  # 2 with open end
-        'blocked4': 500,  # Opponent has 4 (must block)
-        'blocked3': 50  # Opponent has 3 (should block)
+    # Probability-inspired pattern weights
+    weights = {
+        (5, 2): 100000,  # Open 5 (instant win)
+        (4, 2): 10000,   # Open 4 (almost guaranteed win)
+        (4, 1): 2000,    # Blocked 4
+        (3, 2): 1500,    # Open 3
+        (3, 1): 300,     # Blocked 3
+        (2, 2): 100,     # Open 2
+        (2, 1): 30,      # Blocked 2
+        (1, 2): 10       # Single stone with room to grow
     }
 
-    def check_pattern(x, y, dx, dy, player):
-        """Count consecutive stones and open ends in a direction."""
+    def pattern_score(x, y, dx, dy, player):
         count = 0
         open_ends = 0
-
-        # Check forward direction
-        for i in range(1, 6):
+        # Forward
+        for i in range(1, 5):
             nx, ny = x + dx * i, y + dy * i
             if not is_valid(nx, ny):
                 break
@@ -236,9 +243,8 @@ def evaluate_board(board, player):
                 break
             else:
                 break
-
-        # Check backward direction
-        for i in range(1, 6):
+        # Backward
+        for i in range(1, 5):
             nx, ny = x - dx * i, y - dy * i
             if not is_valid(nx, ny):
                 break
@@ -249,36 +255,26 @@ def evaluate_board(board, player):
                 break
             else:
                 break
+        return weights.get((count, open_ends), 0)
 
-        return count, open_ends
+    # Evaluate board
+    for x in range(BOARD_SIZE):
+        for y in range(BOARD_SIZE):
+            if board[x][y] == '.':
+                continue
+            for d in range(8):
+                if board[x][y] == player:
+                    score += pattern_score(x, y, dx[d], dy[d], player)
+                elif board[x][y] == opponent:
+                    score -= pattern_score(x, y, dx[d], dy[d], opponent)
 
-    # Evaluate all positions
+    # Center control bonus
+    center = BOARD_SIZE // 2
     for x in range(BOARD_SIZE):
         for y in range(BOARD_SIZE):
             if board[x][y] == player:
-                for d in range(8):
-                    count, open_ends = check_pattern(x, y, dx[d], dy[d], player)
-                    if count >= 5:
-                        score += patterns['5']
-                    elif count == 4 and open_ends >= 1:
-                        score += patterns['open4']
-                    elif count == 3 and open_ends >= 1:
-                        score += patterns['open3']
-                    elif count == 2 and open_ends >= 1:
-                        score += patterns['open2']
-            elif board[x][y] == opponent:
-                for d in range(8):
-                    count, open_ends = check_pattern(x, y, dx[d], dy[d], opponent)
-                    if count >= 4 and open_ends >= 1:
-                        score -= patterns['blocked4']
-                    elif count >= 3 and open_ends >= 1:
-                        score -= patterns['blocked3']
-
-    # Center control bonus
-    center_x, center_y = BOARD_SIZE // 2, BOARD_SIZE // 2
-    distance = abs(x - center_x) + abs(y - center_y)
-    if distance <= 2:
-        score += 10
+                distance = abs(center - x) + abs(center - y)
+                score += max(0, 10 - distance)  # Bonus for center proximity
 
     return score
 
@@ -318,7 +314,7 @@ def minimax(board, depth, is_maximizing, player):
 
     moves = get_candidate_moves(board)
     if not moves:
-        moves = [(7, 7)]  # Default to center if no moves found (shouldn't happen)
+        moves = [(BOARD_SIZE//2, BOARD_SIZE//2)]  # Default to center if no moves found (shouldn't happen)
 
     best_move = None
 
@@ -432,5 +428,4 @@ def main():
             print("Invalid choice! Try again.")
 
 
-if __name__ == "__main__":
-    main()
+main()
