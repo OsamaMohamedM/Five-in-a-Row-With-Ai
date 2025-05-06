@@ -1,4 +1,5 @@
 import numpy as np
+import hashlib
 class Gomoku:
     def __init__(self, size=15):
         self.size = size                                # Set board dimension
@@ -6,6 +7,7 @@ class Gomoku:
         self.current_player = 1                         # Start with AI (1 for B), human plays as W (2)
         self.moves = []                                 # List to store move history for undo functionality
         self.max_depth = 4                              # Maximum depth for Alpha-Beta search 'to limit computation time'
+        self.transposition_table = {}                   # Transposition table for caching evaluations
 
         """
             self.board = np.zeros((size, size), dtype=int)
@@ -15,6 +17,10 @@ class Gomoku:
             # dtype=int ensures all elements are integers (0 for empty, 1 for AI/B, 2 for human/W)
         """
 
+    def _get_board_hash(self):
+        # Generate a hash of the current board state for the transposition table
+        return hashlib.sha256(self.board.tobytes()).hexdigest()
+        
     def _print_column_indices(self):
         print("  ", end=" ")
         for i in range(self.size):
@@ -179,14 +185,22 @@ class Gomoku:
 
     def alpha_beta(self, depth, alpha, beta, maximizing_player):
         # Implement Alpha-Beta Pruning to find the best move
+        board_hash = self._get_board_hash()
+        tt_entry = self.transposition_table.get((board_hash, depth, maximizing_player))
+        if tt_entry is not None:
+            return tt_entry  # Return cached result if available
+        
         if depth == 0 or self.check_winner() != 0 or self.is_board_full():
-            return self.evaluate(), None
+            eval_score = self.evaluate()
+            self.transposition_table[(board_hash, depth, maximizing_player)] = (eval_score, None)
+            return eval_score, None
 
         if maximizing_player:
-            return self._maximize(depth, alpha, beta)
+            result =  self._maximize(depth, alpha, beta)
         else:
-            return self._minimize(depth, alpha, beta)
-
+            result =  self._minimize(depth, alpha, beta)
+        self.transposition_table[(board_hash, depth, maximizing_player)] = result
+        return result
 
 def _handle_ai_turn(game):
     # Handle AI's turn using Alpha-Beta Pruning
