@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from Gomoku import *
 
+
 class GomokuApp:
     def __init__(self, root):
         self.root = root
@@ -18,15 +19,25 @@ class GomokuApp:
         self.mode_window.title("Choose Game Mode")
         self.mode_window.geometry("400x400")
 
-        label = tk.Label(self.mode_window, text="Choose Game Mode", font=("Helvetica", 18))
+        label = tk.Label(
+            self.mode_window, text="Choose Game Mode", font=("Helvetica", 18)
+        )
         label.pack(pady=10)
 
-        btnHumanVsAi = tk.Button(self.mode_window, text="Human vs AI", font=("Helvetica", 14),
-                                 command=lambda: self.selectMode("human_vs_ai"))
+        btnHumanVsAi = tk.Button(
+            self.mode_window,
+            text="Human vs AI",
+            font=("Helvetica", 14),
+            command=lambda: self.selectMode("human_vs_ai"),
+        )
         btnHumanVsAi.pack(pady=10)
 
-        btnAiVsAi = tk.Button(self.mode_window, text="AI vs AI", font=("Helvetica", 14),
-                              command=lambda: self.selectMode("ai_vs_ai"))
+        btnAiVsAi = tk.Button(
+            self.mode_window,
+            text="AI vs AI",
+            font=("Helvetica", 14),
+            command=lambda: self.selectMode("ai_vs_ai"),
+        )
         btnAiVsAi.pack(pady=10)
 
     def selectMode(self, mode):
@@ -39,21 +50,32 @@ class GomokuApp:
         self.game = Gomoku(size=15)
         self.buttons = []
 
-        self.status_label = tk.Label(self.root, text="Starting game...", font=("Helvetica", 14))
+        self.status_label = tk.Label(
+            self.root, text="Starting game...", font=("Helvetica", 14)
+        )
         self.status_label.pack()
 
-        self.canvas = tk.Canvas(self.root, width=self.game.size * 30, height=self.game.size * 30, bg="white")
+        self.canvas = tk.Canvas(
+            self.root, width=self.game.size * 30, height=self.game.size * 30, bg="white"
+        )
         self.canvas.pack()
 
         self.draw_grid()
         self.canvas.bind("<Button-1>", self.on_canvas_click)
 
-        back_button = tk.Button(self.root, text="Back to Game Modes", font=("Helvetica", 14), command=self.back_to_game_modes)
+        back_button = tk.Button(
+            self.root,
+            text="Back to Game Modes",
+            font=("Helvetica", 14),
+            command=self.back_to_game_modes,
+        )
         back_button.pack(pady=10)
 
         if self.gameMode == "human_vs_ai" and self.game.current_player == 1:
             self.status_label.config(text="AI (Minimax) thinking...")
             self.root.after(500, lambda: self.ai_turn(use_alpha_beta=False))
+        elif self.gameMode == "human_vs_ai" and self.game.current_player == 2:
+            self.status_label.config(text="Your turn...")
         elif self.gameMode == "ai_vs_ai" and self.game.current_player == 1:
             self.root.after(500, self.ai_vs_ai_loop)
 
@@ -64,10 +86,13 @@ class GomokuApp:
                 y0 = i * 30
                 x1 = x0 + 30
                 y1 = y0 + 30
-                rect = self.canvas.create_rectangle(x0, y0, x1, y1, outline="gray", fill="white")
+                rect = self.canvas.create_rectangle(
+                    x0, y0, x1, y1, outline="gray", fill="white"
+                )
                 self.buttons.append((rect, i, j))
 
     def on_canvas_click(self, event):
+        self.status_label.config(text="Human turn...")
         if self.game.current_player != 2:
             return
 
@@ -75,7 +100,9 @@ class GomokuApp:
         col = event.x // 30
 
         if not self.is_adjacent_to_move(row, col):
-            messagebox.showinfo("Invalid Move", "You must play adjacent to an existing move.")
+            messagebox.showinfo(
+                "Invalid Move", "You must play adjacent to an existing move."
+            )
             return
 
         if self.game.make_move(row, col):
@@ -89,9 +116,16 @@ class GomokuApp:
         if self.game.board[row][col] != 0:
             return False
 
-        directions = [(-1, -1), (-1, 0), (-1, 1),
-                      (0, -1),          (0, 1),
-                      (1, -1),  (1, 0), (1, 1)]
+        directions = [
+            (-1, -1),
+            (-1, 0),
+            (-1, 1),
+            (0, -1),
+            (0, 1),
+            (1, -1),
+            (1, 0),
+            (1, 1),
+        ]
 
         for dr, dc in directions:
             nr, nc = row + dr, col + dc
@@ -117,7 +151,9 @@ class GomokuApp:
             if self.game.check_winner_at(*move) == player:
                 self.update_board()
                 self.status_label.config(text=f"{algo_name} wins!")
-                messagebox.showinfo("Game Over", f"{algo_name} ({'B' if player == 1 else 'W'}) wins!")
+                messagebox.showinfo(
+                    "Game Over", f"{algo_name} ({'B' if player == 1 else 'W'}) wins!"
+                )
                 return True
             self.game.undo_move()
 
@@ -133,7 +169,9 @@ class GomokuApp:
             self.game.undo_move()
 
         if use_alpha_beta:
-            _, move = self.game.alpha_beta(self.game.max_depth, float('-inf'), float('inf'), player == 1)
+            _, move = self.game.alpha_beta(
+                self.game.max_depth, float("-inf"), float("inf"), player == 1
+            )
         else:
             _, move = self.game.minimax(self.game.max_depth, player == 1)
 
@@ -145,6 +183,8 @@ class GomokuApp:
         else:
             messagebox.showinfo("Game Over", "No valid moves.")
             return True
+        if self.gameMode == "human_vs_ai":
+            self.status_label.config(text="Human turn...")
 
         return False
 
@@ -164,12 +204,20 @@ class GomokuApp:
     def check_game_end(self):
         winner = self.game.check_winner()
         if winner == 1:
-            msg = "Minimax (Black) wins!" if self.gameMode == "ai_vs_ai" else "AI (Black) wins!"
+            msg = (
+                "Minimax (Black) wins!"
+                if self.gameMode == "ai_vs_ai"
+                else "AI (Black) wins!"
+            )
             self.status_label.config(text=msg)
             messagebox.showinfo("Game Over", msg)
             return True
         elif winner == 2:
-            msg = "Alpha-Beta (purple) wins!" if self.gameMode == "ai_vs_ai" else "You (purple) win!"
+            msg = (
+                "Alpha-Beta (purple) wins!"
+                if self.gameMode == "ai_vs_ai"
+                else "You (purple) win!"
+            )
             self.status_label.config(text=msg)
             messagebox.showinfo("Game Over", msg)
             return True
@@ -184,6 +232,7 @@ class GomokuApp:
         for widget in self.root.winfo_children():
             widget.destroy()
         self.chooseGameMode()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
